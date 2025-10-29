@@ -1,16 +1,22 @@
 import React from "react";
-import {BrowserRouter as Router, Routes, Route} from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+
+// Components
 import Navbar from "./components/Navbar";
+import Footer from "./components/Footer"; // Import Footer
+
+// Pages
 import HeroSection from "./pages/HeroSection";
 import TrustSection from "./pages/TrustSection";
 import PricingSection from "./pages/PricingSection";
-import Footer from "./components/Footer";
 import Signup from "./pages/Signup";
+import AboutPage from "./pages/AboutPage"; // 1. Import the new AboutPage
 
 const App = () => {
   return (
     <Router>
       <Navbar />
+      
       <Routes>
         {/* 🏠 Home Page */}
         <Route
@@ -20,7 +26,7 @@ const App = () => {
               <HeroSection />
               <TrustSection />
               <PricingSection />
-              <Footer />
+              {/* Footer removed from here */}
             </>
           }
         />
@@ -34,11 +40,19 @@ const App = () => {
               <HeroSection />
               <TrustSection />
               <PricingSection />
-              <Footer />
+              {/* Footer removed from here */}
             </>
           }
         />
+
+        {/* 2. Add the new /about route */}
+        <Route path="/about" element={<AboutPage />} />
+
       </Routes>
+
+      {/* 3. Add Footer here to be on all pages */}
+      <Footer /> 
+
     </Router>
   );
 };
