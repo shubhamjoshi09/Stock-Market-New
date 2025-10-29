@@ -1,21 +1,46 @@
-import React from 'react'
-import Navbar from './components/Navbar'
-import HeroSection from './pages/HeroSection'
-import TrustSection from './pages/TrustSection'
-import PricingSection from './pages/PricingSection'
-import Footer from './components/Footer'
+import React from "react";
+import {BrowserRouter as Router, Routes, Route} from "react-router-dom";
+import Navbar from "./components/Navbar";
+import HeroSection from "./pages/HeroSection";
+import TrustSection from "./pages/TrustSection";
+import PricingSection from "./pages/PricingSection";
+import Footer from "./components/Footer";
+import Signup from "./pages/Signup";
 
 const App = () => {
   return (
-    <>
-      <Navbar/>
-      <HeroSection/>
-      <TrustSection/>
-      <PricingSection/>
-      <Footer/>
-    </>
-  )
-}
+    <Router>
+      <Navbar />
+      <Routes>
+        {/* 🏠 Home Page */}
+        <Route
+          path="/"
+          element={
+            <>
+              <HeroSection />
+              <TrustSection />
+              <PricingSection />
+              <Footer />
+            </>
+          }
+        />
 
-export default App
+        {/* 🧾 Signup + Other Sections */}
+        <Route
+          path="/signup"
+          element={
+            <>
+              <Signup /> {/* Signup shown first */}
+              <HeroSection />
+              <TrustSection />
+              <PricingSection />
+              <Footer />
+            </>
+          }
+        />
+      </Routes>
+    </Router>
+  );
+};
 
+export default App;
