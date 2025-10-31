@@ -11,6 +11,10 @@ import TrustSection from "./pages/TrustSection";
 import PricingSection from "./pages/PricingSection";
 import Signup from "./pages/Signup";
 import AboutPage from "./pages/AboutPage"; // 1. Import the new AboutPage
+import ChargesSection from "./pages/ChargesSection";
+import PricingTable  from "./pages/PricingTable";
+import AccountCharges from "./pages/AccountCharges";
+import ChargesExplained from "./pages/ChargesExplained";
 
 const App = () => {
   return (
@@ -33,20 +37,22 @@ const App = () => {
 
         {/* 🧾 Signup + Other Sections */}
         <Route
-          path="/signup"
-          element={
-            <>
-              <Signup /> {/* Signup shown first */}
-              <HeroSection />
-              <TrustSection />
-              <PricingSection />
-              {/* Footer removed from here */}
-            </>
-          }
-        />
+          path="/signup" element={<Signup />}/>
 
         {/* 2. Add the new /about route */}
         <Route path="/about" element={<AboutPage />} />
+
+      <Route 
+       path ="/pricing" 
+       element={
+       <>
+           <ChargesSection/>
+            <PricingTable/>
+            <AccountCharges/>
+            <ChargesExplained/>
+       </>
+       }
+      />
 
       </Routes>
 
