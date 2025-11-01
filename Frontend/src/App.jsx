@@ -10,7 +10,8 @@ import HeroSection from "./pages/HeroSection";
 import TrustSection from "./pages/TrustSection";
 import PricingSection from "./pages/PricingSection";
 import Signup from "./pages/Signup";
-import AboutPage from "./pages/AboutPage"; // 1. Import the new AboutPage
+import AboutPage from "./pages/AboutPage";
+import Products from "./pages/Products"; // ✅ New import
 
 const App = () => {
   return (
@@ -30,23 +31,14 @@ const App = () => {
           }
         />
 
-        {/* 🧾 Signup + Other Sections */}
-        <Route
-          path="/signup"
-          element={
-            <>
-              <Signup /> {/* Signup shown first */}
-              <HeroSection />
-              <TrustSection />
-              <PricingSection />
-              {/* Footer removed from here */}
-            </>
-          }
-        />
+        {/* 🧾 Signup Page */}
+        <Route path="/signup" element={<Signup />} />
 
-        {/* 2. Add the new /about route */}
+        {/* ℹ️ About Page */}
         <Route path="/about" element={<AboutPage />} />
 
+        {/* 🧩 Products Page */}
+        <Route path="/products" element={<Products />} /> {/* ✅ Added */}
       </Routes>
 
       {/* 📌 Footer shown on all pages */}
