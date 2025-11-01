@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Image from "../assets/images.png";
+import Image from "../assets/signup.png";
 
 const Signup = () => {
   const [mobile, setMobile] = useState("");
@@ -35,7 +35,7 @@ const Signup = () => {
       {/* Signup Form Section */}
       <div className="flex flex-col md:flex-row items-center justify-center px-6 md:px-20">
         <img
-          src="https://zerodha.com/static/images/landing.png"
+          src={Image}
           alt="Illustration"
           className="hidden md:block w-1/2 max-w-lg"
         />
@@ -60,7 +60,7 @@ const Signup = () => {
                 ))}
               </select>
 
-              {/* Mobile Number Input */}
+
               <input
                 type="tel"
                 maxLength="10"
