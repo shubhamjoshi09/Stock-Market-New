@@ -1,4 +1,7 @@
 import React from "react";
+import Image from "../assets/stock-market9.jpg";
+import { FaFacebook, FaInstagram, FaLinkedinIn, FaPinterest, FaTwitter, FaWhatsapp, FaYoutube } from "react-icons/fa";
+
 
 export default function Footer() {
   return (
@@ -7,26 +10,30 @@ export default function Footer() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
     
           <div>
-            <img src="/media/logo.svg" alt="Logo" className="w-1/2 mb-3" />
-            <p className="text-sm text-gray-500">
+            <img src={Image} alt="Logo" className="w-18 h-18 mb-3" />
+            <div className="text-sm text-gray-500">
               &copy; 2010 - 2024, Stock Market Platform <br />
               All rights reserved.
-            </p>
-
-           
-            <div className="flex items-center space-x-3 mt-4">
-              <i className="fa-brands fa-twitter text-xl hover:text-blue-500"></i>
-              <i className="fa-brands fa-facebook-f text-xl hover:text-blue-600"></i>
-              <i className="fa-brands fa-instagram text-xl hover:text-pink-500"></i>
-              <i className="fa-brands fa-linkedin-in text-xl hover:text-blue-700"></i>
+               <div className="flex items-center text-lg space-x-3 mt-5">
+                    <FaFacebook className='text-[#6f7070] cursor-pointer hover:text-black 
+                    transition-colors duration-300'/>
+                    <FaTwitter className='text-[#6f7070] cursor-pointer hover:text-black 
+                    transition-colors duration-300'/>
+                    <FaInstagram className='text-[#6f7070] cursor-pointer hover:text-black 
+                    transition-colors duration-300'/>
+                    <FaPinterest className='text-[#6f7070] cursor-pointer hover:text-black 
+                    transition-colors duration-300'/>
+                </div>
             </div>
+            <div className="border-t my-3"></div>
 
-            <div className="border-t my-4"></div>
-
-            <div className="flex items-center space-x-3 mt-3">
-              <i className="fa-brands fa-youtube text-xl hover:text-red-500"></i>
-              <i className="fa-brands fa-whatsapp text-xl hover:text-green-500"></i>
-              <i className="fa-brands fa-telegram text-xl hover:text-sky-500"></i>
+            <div className="flex items-center text-lg space-x-3 mt-6">
+                    <FaLinkedinIn className='text-[#6f7070] cursor-pointer hover:text-black 
+                    transition-colors duration-300'/>
+                    <FaWhatsapp className='text-[#6f7070] cursor-pointer hover:text-black 
+                    transition-colors duration-300'/>
+                    <FaYoutube className='text-[#6f7070] cursor-pointer hover:text-black 
+                    transition-colors duration-300'/>
             </div>
           </div>
 
@@ -114,8 +121,8 @@ export default function Footer() {
             designed to offer transparency, security, and efficiency in all your
             trading activities. Registered Office: Technology Park, Sector 5,
             Electronic City, Bangalore - 560100, Karnataka, India. For trading
-            related queries: support@stockmarket.com, for technical issues:
-            tech@stockmarket.com. Please read all risk disclosure documents
+            related queries: <span className="text-blue-600">support@stockmarket.com</span>for technical issues:
+            <span className="text-blue-600">tech@stockmarket.com.</span>Please read all risk disclosure documents
             carefully before trading.
           </p>
 
@@ -126,7 +133,7 @@ export default function Footer() {
             grievances through effective communication channels.
           </p>
 
-          <p>Online Grievance Redressal | Investor Protection Mechanism</p>
+          <p className="text-blue-600">Online Grievance Redressal | Investor Protection Mechanism</p>
 
           <p>
             Trading and investments in financial markets involve substantial
@@ -146,13 +153,8 @@ export default function Footer() {
             "Secure your account from unauthorized access. Always update your
             mobile number and email with your broker. Get instant notifications
             for all your trades directly from the exchange. This message is
-            issued for investor awareness and protection. Complete your KYC once
-            through any SEBI registered intermediary and use it across all
-            platforms." Important: We never provide trading tips or
-            recommendations. No one is authorized to trade on your behalf. If
-            anyone approaches you claiming to represent our company and offering
-            such services, please report immediately through our grievance
-            portal.
+            issued for investor awareness and protection. <span className="text-blue-600">Complete your KYC once portal.</span>
+            
           </p>
         </div>
 

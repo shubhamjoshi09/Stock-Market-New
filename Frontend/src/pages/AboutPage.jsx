@@ -1,5 +1,12 @@
 import React from 'react';
 
+// 3. IMPORT images from the src/assets folder
+// We are in pages/AboutPage.jsx, so we go up one level (../) to src/ and then down to assets/
+import founderJaneImg from '../assets/Jane R. Doe.jpg';
+import founderAlexImg from '../assets/Alex M. Smith.jpg';
+import founderSamImg from '../assets/Sam K. Lee.jpg';
+
+
 // --- Helper Icon Components (for this page) ---
 
 const AnalyticsIcon = () => (
@@ -35,16 +42,15 @@ const LinkedInIcon = () => (
 
 const AboutPage = () => {
   return (
-    <div className="text-gray-800 font-['Inter',_sans-serif]">
+    <div className="pt-28 pb-10 min-h-screen">
       {/* --- Hero Section --- */}
-      <section className="container mx-auto px-6 py-24 text-center">
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold mb-6">
+      <section className="container mx-auto px-6 py-12 text-center"> 
+        <h1 className="text-3xl md:text-4xl font-semibold text-gray-800 mb-4">
           Empowering Your Financial Future
         </h1>
         <p className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto mb-10">
           We're revolutionizing the way people invest with cutting-edge technology, transparent pricing, and an unwavering commitment to your success.
         </p>
-        {/* --- REMOVED BUTTON --- */}
       </section>
 
       {/* --- Mission/Vision Section --- */}
@@ -52,19 +58,19 @@ const AboutPage = () => {
         <div className="container mx-auto px-6 max-w-6xl">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center md:text-left">
             <div>
-              <h3 className="text-2xl font-semibold mb-3">Our Mission</h3>
+              <h3 className="text-xl font-semibold text-gray-800 mb-3">Our Mission</h3>
               <p className="text-gray-600 leading-relaxed">
                 To democratize access to financial markets by providing professional-grade tools and insights to investors of all levels. We believe everyone deserves the opportunity to build wealth and achieve financial independence.
               </p>
             </div>
             <div>
-              <h3 className="text-2xl font-semibold mb-3">Our Vision</h3>
+              <h3 className="text-xl font-semibold text-gray-800 mb-3">Our Vision</h3>
               <p className="text-gray-600 leading-relaxed">
                 To become the world's most trusted and innovative trading platform, empowering millions to take control of their financial destiny.
               </p>
             </div>
             <div>
-              <h3 className="text-2xl font-semibold mb-3">Our Values</h3>
+              <h3 className="text-xl font-semibold text-gray-800 mb-3">Our Values</h3>
               <p className="text-gray-600 leading-relaxed">
                 Integrity, innovation, and customer-centricity guide everything we do. We're committed to transparency and putting your interests first.
               </p>
@@ -100,7 +106,7 @@ const AboutPage = () => {
       {/* --- Why Choose Us Section --- */}
       <section className="py-20">
         <div className="container mx-auto px-6 max-w-6xl">
-          <h2 className="text-3xl md:text-4xl font-semibold text-center mb-6">
+          <h2 className="text-2xl font-semibold text-gray-800 text-center mb-6">
             Why Choose Us
           </h2>
           <p className="text-lg text-gray-600 text-center max-w-3xl mx-auto mb-16">
@@ -110,7 +116,7 @@ const AboutPage = () => {
             {/* Feature Card 1 */}
             <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-100 text-center">
               <AnalyticsIcon />
-              <h3 className="text-xl font-semibold mb-2">Real-Time Analytics</h3>
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">Real-Time Analytics</h3>
               <p className="text-gray-600">
                 Access live market data and advanced charting tools to make informed investment decisions.
               </p>
@@ -118,7 +124,7 @@ const AboutPage = () => {
             {/* Feature Card 2 */}
             <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-100 text-center">
               <ShieldIcon />
-              <h3 className="text-xl font-semibold mb-2">Secure Trading</h3>
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">Secure Trading</h3>
               <p className="text-gray-600">
                 Bank-level encryption and multi-factor authentication keep your investments safe.
               </p>
@@ -126,7 +132,7 @@ const AboutPage = () => {
             {/* Feature Card 3 */}
             <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-100 text-center">
               <PortfolioIcon />
-              <h3 className="text-xl font-semibold mb-2">Portfolio Management</h3>
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">Portfolio Management</h3>
               <p className="text-gray-600">
                 Track and optimize your portfolio with intelligent insights and performance metrics.
               </p>
@@ -134,7 +140,7 @@ const AboutPage = () => {
             {/* Feature Card 4 */}
             <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-100 text-center">
               <BoltIcon />
-              <h3 className="text-xl font-semibold mb-2">Lightning Fast Execution</h3>
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">Lightning Fast Execution</h3>
               <p className="text-gray-600">
                 Execute trades in milliseconds with our high-performance trading infrastructure.
               </p>
@@ -146,7 +152,7 @@ const AboutPage = () => {
       {/* --- Built by Traders Section --- */}
       <section className="bg-gray-50 py-20">
         <div className="container mx-auto px-6 max-w-5xl text-center">
-          <h2 className="text-3xl md:text-4xl font-semibold mb-6">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-6">
             Built by Traders, for Traders
           </h2>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto mb-12">
@@ -170,10 +176,10 @@ const AboutPage = () => {
       </section>
 
 
-      {/* --- Our Founders Section (Moved to the end) --- */}
+      {/* --- Our Founders Section --- */}
       <section className="bg-white py-20">
         <div className="container mx-auto px-6 max-w-6xl">
-          <h2 className="text-3xl md:text-4xl font-semibold text-center mb-16">
+          <h2 className="text-2xl font-semibold text-gray-800 text-center mb-16">
             Our Founders
           </h2>
           {/* Team Grid */}
@@ -181,12 +187,13 @@ const AboutPage = () => {
             
             {/* Team Member Card 1 */}
             <div className="flex flex-col items-center text-center">
+              {/* 3. Use the imported variable in the src attribute */}
               <img
-                src="https://placehold.co/200x200/e2e8f0/333?text=Jane+R+D"
+                src={founderJaneImg}
                 alt="Jane R. Doe"
-                className="rounded-full w-40 h-40 object-cover mb-4 shadow-lg"
+                className="rounded-full w-40 h-40 object-cover mb-4 shadow-lg bg-gray-200"
               />
-              <h3 className="text-xl font-semibold">Jane R. Doe</h3>
+              <h3 className="text-xl font-semibold text-gray-800">Jane R. Doe</h3>
               <p className="text-gray-500 mb-2">Founder, CEO</p>
               <p className="text-gray-600 mb-4 max-w-xs">
                 Jane founded Stock Market with a vision to democratize access to advanced, AI-driven trading tools for everyone.
@@ -203,12 +210,13 @@ const AboutPage = () => {
 
             {/* Team Member Card 2 */}
             <div className="flex flex-col items-center text-center">
+              {/* 3. Use the imported variable in the src attribute */}
               <img
-                src="https://placehold.co/200x200/e2e8f0/333?text=Alex+M+S"
+                src={founderAlexImg}
                 alt="Alex M. Smith"
-                className="rounded-full w-40 h-40 object-cover mb-4 shadow-lg"
+                className="rounded-full w-40 h-40 object-cover mb-4 shadow-lg bg-gray-200"
               />
-              <h3 className="text-xl font-semibold">Alex M. Smith</h3>
+              <h3 className="text-xl font-semibold text-gray-800">Alex M. Smith</h3>
               <p className="text-gray-500 mb-2">Co-founder, CPO</p>
               <p className="text-gray-600 mb-4 max-w-xs">
                 Alex is the architect of our user experience, focusing on building an intuitive platform that empowers traders of all levels.
@@ -225,12 +233,13 @@ const AboutPage = () => {
 
             {/* Team Member Card 3 */}
             <div className="flex flex-col items-center text-center">
+              {/* 3. Use the imported variable in the src attribute */}
               <img
-                src="https://placehold.co/200x200/e2e8f0/333?text=Sam+K+L"
+                src={founderSamImg}
                 alt="Sam K. Lee"
-                className="rounded-full w-40 h-40 object-cover mb-4 shadow-lg"
+                className="rounded-full w-40 h-40 object-cover mb-4 shadow-lg bg-gray-200"
               />
-              <h3 className="text-xl font-semibold">Sam K. Lee</h3>
+              <h3 className="text-xl font-semibold text-gray-800">Sam K. Lee</h3>
               <p className="text-gray-500 mb-2">CTO</p>
               <p className="text-gray-600 mb-4 max-w-xs">
                 Sam leads our engineering team, scaling our infrastructure and pioneering the AI models that power our core features.
@@ -254,6 +263,3 @@ const AboutPage = () => {
 };
 
 export default AboutPage;
-
-
-
