@@ -1,7 +1,7 @@
 import React from "react";
 import Image from "../assets/stock-market9.jpg";
-import { FaFacebook, FaInstagram, FaLinkedinIn, FaPinterest, FaTwitter, FaWhatsapp } from "react-icons/fa";
-import { FaYoutube } from "react-icons/fa6";
+import { FaFacebook, FaInstagram, FaLinkedinIn, FaPinterest, FaTwitter, FaWhatsapp, FaYoutube } from "react-icons/fa";
+
 
 export default function Footer() {
   return (

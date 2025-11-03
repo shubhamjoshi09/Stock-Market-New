@@ -28,7 +28,7 @@ const App = () => {
         <Navbar />
 
         <Routes>
-          {/* ðŸ  Home Page */}
+          {/* Home Page */}
           <Route
             path="/"
             element={
@@ -36,32 +36,32 @@ const App = () => {
                 <HeroSection />
                 <TrustSection />
                 <PricingSection />
-                {/* Footer removed from here */}
               </>
             }
           />
 
-          {/* ðŸ§ Signup + Other Sections */}
+          {/* Signup */}
           <Route path="/signup" element={<Signup />} />
 
-          {/* ðŸ"§ OTP Verification */}
+          {/* OTP Verification */}
           <Route path="/verify-otp" element={<OTPVerification />} />
 
-          {/* ðŸ  User Dashboard */}
+          {/* User Dashboard */}
           <Route path="/dashboard" element={<Dashboard />} />
 
-          {/* 📊 Portfolio */}
+          {/* Portfolio */}
           <Route path="/portfolio" element={<Portfolio />} />
 
-          {/* 📈 Trading */}
+          {/* Trading */}
           <Route path="/trading" element={<TradingPage />} />
 
-          {/* 2. Add the new /about route */}
+          {/* About */}
           <Route path="/about" element={<AboutPage />} />
 
-          {/* Login Page */}
+          {/* Login */}
           <Route path="/login" element={<Login />} />
 
+          {/* Pricing */}
           <Route
             path="/pricing"
             element={
@@ -75,7 +75,6 @@ const App = () => {
           />
         </Routes>
 
-        {/* 3. Add Footer here to be on all pages */}
         <Footer />
       </Router>
     </AuthProvider>
