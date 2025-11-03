@@ -1,18 +1,35 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import Image from "../assets/stock-market9.jpg";
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { isAuthenticated, user, logout } = useAuth();
 
-  const navLinks = [
+  // Different nav links for authenticated vs non-authenticated users
+  const publicNavLinks = [
     { name: "Signup", path: "/signup" },
     { name: "About", path: "/about" },
     { name: "Products", path: "/products" },
     { name: "Pricing", path: "/pricing" },
-    { name: "Support", path: "/support" },
+    { name: "Log In", path: "/login" },
   ];
+
+  const authenticatedNavLinks = [
+    { name: "Dashboard", path: "/dashboard" },
+    { name: "Portfolio", path: "/portfolio" },
+    { name: "Trading", path: "/trading" },
+    { name: "About", path: "/about" },
+  ];
+
+  const navLinks = isAuthenticated ? authenticatedNavLinks : publicNavLinks;
+
+  const handleLogout = () => {
+    logout();
+    setMenuOpen(false);
+  };
 
   return (
     <nav className="bg-white shadow-sm fixed w-full top-0 left-0 z-50">
@@ -20,13 +37,16 @@ const Navbar = () => {
         {/* Logo */}
         <div className="flex items-center space-x-2 bg-none">
           <img src={Image} alt="Logo" className="h-15 bg-none" />
-          <Link to="/" className="text-lg font-semibold text-gray-700">
+          <Link
+            to={isAuthenticated ? "/dashboard" : "/"}
+            className="text-lg font-semibold text-gray-700"
+          >
             STOCK MARKET
           </Link>
         </div>
 
         {/* Desktop Links */}
-        <ul className="hidden md:flex space-x-8 text-gray-700 font-medium">
+        <ul className="hidden md:flex space-x-8 text-gray-700 font-medium items-center">
           {navLinks.map((link) => (
             <li key={link.name}>
               <Link to={link.path} className="hover:text-blue-600">
@@ -34,6 +54,22 @@ const Navbar = () => {
               </Link>
             </li>
           ))}
+
+          {isAuthenticated && (
+            <>
+              <li className="text-sm text-gray-500">
+                Welcome, {user?.firstName}
+              </li>
+              <li>
+                <button
+                  onClick={handleLogout}
+                  className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
+                >
+                  Logout
+                </button>
+              </li>
+            </>
+          )}
         </ul>
 
         {/* Mobile menu button */}
@@ -59,6 +95,22 @@ const Navbar = () => {
                 </Link>
               </li>
             ))}
+
+            {isAuthenticated && (
+              <>
+                <li className="text-sm text-gray-500 py-2">
+                  Welcome, {user?.firstName}
+                </li>
+                <li>
+                  <button
+                    onClick={handleLogout}
+                    className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
+                  >
+                    Logout
+                  </button>
+                </li>
+              </>
+            )}
           </ul>
         </div>
       )}

@@ -1,65 +1,84 @@
-import React from "react";
+﻿import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
 
 // Components
 import Navbar from "./components/Navbar";
-import Footer from "./components/Footer"; // Import Footer
-
+import Footer from "./components/Footer";
 // Pages
 import HeroSection from "./pages/HeroSection";
 import TrustSection from "./pages/TrustSection";
 import PricingSection from "./pages/PricingSection";
 import Signup from "./pages/Signup";
-import AboutPage from "./pages/AboutPage"; // 1. Import the new AboutPage
+import OTPVerification from "./pages/OTPVerification";
+import Dashboard from "./pages/Dashboard";
+import Portfolio from "./pages/Portfolio";
+import AboutPage from "./pages/AboutPage";
 import ChargesSection from "./pages/ChargesSection";
-import PricingTable  from "./pages/PricingTable";
+import PricingTable from "./pages/PricingTable";
 import AccountCharges from "./pages/AccountCharges";
 import ChargesExplained from "./pages/ChargesExplained";
+import Login from "./pages/Login";
+import TradingPage from "./pages/TradingPage";
 
 const App = () => {
   return (
-    <Router>
-      <Navbar />
-      
-      <Routes>
-        {/* 🏠 Home Page */}
-        <Route
-          path="/"
-          element={
-            <>
-              <HeroSection />
-              <TrustSection />
-              <PricingSection />
-              {/* Footer removed from here */}
-            </>
-          }
-        />
+    <AuthProvider>
+      <Router>
+        <Navbar />
 
-        {/* 🧾 Signup + Other Sections */}
-        <Route
-          path="/signup" element={<Signup />}/>
+        <Routes>
+          {/* ðŸ  Home Page */}
+          <Route
+            path="/"
+            element={
+              <>
+                <HeroSection />
+                <TrustSection />
+                <PricingSection />
+                {/* Footer removed from here */}
+              </>
+            }
+          />
 
-        {/* 2. Add the new /about route */}
-        <Route path="/about" element={<AboutPage />} />
+          {/* ðŸ§ Signup + Other Sections */}
+          <Route path="/signup" element={<Signup />} />
 
-      <Route 
-       path ="/pricing" 
-       element={
-       <>
-           <ChargesSection/>
-            <PricingTable/>
-            <AccountCharges/>
-            <ChargesExplained/>
-       </>
-       }
-      />
+          {/* ðŸ"§ OTP Verification */}
+          <Route path="/verify-otp" element={<OTPVerification />} />
 
-      </Routes>
+          {/* ðŸ  User Dashboard */}
+          <Route path="/dashboard" element={<Dashboard />} />
 
-      {/* 3. Add Footer here to be on all pages */}
-      <Footer /> 
+          {/* 📊 Portfolio */}
+          <Route path="/portfolio" element={<Portfolio />} />
 
-    </Router>
+          {/* 📈 Trading */}
+          <Route path="/trading" element={<TradingPage />} />
+
+          {/* 2. Add the new /about route */}
+          <Route path="/about" element={<AboutPage />} />
+
+          {/* Login Page */}
+          <Route path="/login" element={<Login />} />
+
+          <Route
+            path="/pricing"
+            element={
+              <>
+                <ChargesSection />
+                <PricingTable />
+                <AccountCharges />
+                <ChargesExplained />
+              </>
+            }
+          />
+        </Routes>
+
+        {/* 3. Add Footer here to be on all pages */}
+        <Footer />
+      </Router>
+    </AuthProvider>
   );
 };
 

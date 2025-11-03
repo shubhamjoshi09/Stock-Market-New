@@ -1,10 +1,17 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import pressImg from "../assets/pressLogos.png";
 import educationImg from "../assets/education.svg";
 import pricingImg from "../assets/pricing0.svg";
 import intradayImg from "../assets/intradayTrades.svg";
 
 const PricingSection = () => {
+  const navigate = useNavigate();
+
+  const handleSignupClick = () => {
+    navigate("/signup");
+  };
+
   return (
     <div className="bg-white text-gray-800 py-20 px-6">
       <div className="max-w-7xl mx-auto flex flex-col items-center">
@@ -94,11 +101,15 @@ const PricingSection = () => {
           Open a Stock Market account
         </h1>
         <p className="text-gray-600 text-sm md:text-xl mb-8 max-w-3xl">
-          Modern platforms and apps, ₹0 investments, and flat ₹20 intraday and F&O trades.
+          Modern platforms and apps, ₹0 investments, and flat ₹20 intraday and
+          F&O trades.
         </p>
-         <button className="bg-blue-600 text-white px-6 py-3 rounded-md text-lg font-medium hover:bg-blue-700 transition-all">
-        Sign up for free
-      </button>
+        <button
+          onClick={handleSignupClick}
+          className="bg-blue-600 text-white px-6 py-3 rounded-md text-lg font-medium hover:bg-blue-700 transition-all cursor-pointer"
+        >
+          Sign up for free
+        </button>
       </div>
     </div>
   );
