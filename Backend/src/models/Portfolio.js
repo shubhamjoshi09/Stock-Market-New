@@ -157,7 +157,9 @@ const portfolioSchema = new mongoose.Schema(
 );
 
 // Indexes for better performance
-portfolioSchema.index({ userId: 1 });
+// Note: `userId` is declared with `unique: true` in the schema which already creates
+// an index. Declaring the same index again causes a duplicate-index warning, so
+// we avoid redeclaring it here.
 portfolioSchema.index({ "holdings.symbol": 1 });
 portfolioSchema.index({ lastMarketUpdate: -1 });
 

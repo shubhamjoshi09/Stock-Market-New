@@ -215,7 +215,8 @@ const transactionSchema = new mongoose.Schema(
 
 // Indexes for better query performance
 transactionSchema.index({ userId: 1, createdAt: -1 });
-transactionSchema.index({ transactionId: 1 });
+// `transactionId` is declared with `unique: true` above which creates an index automatically.
+// Avoid declaring the same index twice to prevent duplicate-index warnings.
 transactionSchema.index({ orderId: 1 });
 transactionSchema.index({ symbol: 1 });
 transactionSchema.index({ status: 1 });

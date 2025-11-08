@@ -5,10 +5,10 @@ dotenv.config();
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    // Starting with the MongoDB Node.js Driver v4, `useNewUrlParser` and
+    // `useUnifiedTopology` are no longer needed and are ignored. Keep the
+    // connection call minimal and let mongoose apply sensible defaults.
+    const conn = await mongoose.connect(process.env.MONGODB_URI);
 
     console.log(`MongoDB Connected: ${conn.connection.host}`);
 

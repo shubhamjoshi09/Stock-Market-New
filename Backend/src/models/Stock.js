@@ -8,7 +8,8 @@ const stockSchema = new mongoose.Schema(
       required: true,
       unique: true,
       uppercase: true,
-      index: true,
+      // `unique: true` already creates an index for `symbol`. Remove the explicit
+      // `index: true` to avoid duplicate index warnings.
     },
     companyName: {
       type: String,
@@ -121,7 +122,8 @@ const stockSchema = new mongoose.Schema(
     // Company Classification
     sector: {
       type: String,
-      index: true,
+      // `sector` is indexed via `stockSchema.index({ sector: 1 })` below. Avoid
+      // `index: true` here to prevent duplicate-index warnings.
     },
     industry: {
       type: String,
@@ -129,7 +131,7 @@ const stockSchema = new mongoose.Schema(
     marketCapCategory: {
       type: String,
       enum: ["Large Cap", "Mid Cap", "Small Cap"],
-      index: true,
+      // Index declared via `stockSchema.index({ marketCapCategory: 1 })` below.
     },
 
     // Financial Ratios
