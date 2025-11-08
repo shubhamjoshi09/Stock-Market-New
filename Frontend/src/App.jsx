@@ -20,6 +20,8 @@ import AccountCharges from "./pages/AccountCharges";
 import ChargesExplained from "./pages/ChargesExplained";
 import Login from "./pages/Login";
 import TradingPage from "./pages/TradingPage";
+import ProductSection from "./pages/ProductSection.jsx";
+import ZerodhaUniverse from "./pages/ZerodhaUniverse.jsx";
 
 const App = () => {
   return (
@@ -70,6 +72,15 @@ const App = () => {
                 <PricingTable />
                 <AccountCharges />
                 <ChargesExplained />
+              </>
+            }
+          />
+          <Route
+            path="/products"
+            element={
+              <>
+                <ProductSection/>
+                <ZerodhaUniverse/>
               </>
             }
           />
