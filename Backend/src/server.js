@@ -1,4 +1,5 @@
 import express from "express";
+import http from "http";
 import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
@@ -136,26 +137,54 @@ app.use(notFound);
 // Global error handler
 app.use(errorHandler);
 
-// Start server
-const PORT = process.env.PORT || 5000;
+// Start server with better error handling when the port is already in use.
+const PORT = parseInt(process.env.PORT, 10) || 5000;
 
-const server = app.listen(PORT, () => {
-  console.log(
-    `🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`
-  );
-  console.log(`📊 Stock Market API: http://localhost:${PORT}`);
-  console.log(`🏥 Health Check: http://localhost:${PORT}/api/health`);
+// Start server with retry logic: if desired port is in use, try subsequent ports.
+function startServer(port, retries = 3) {
+  const server = http.createServer(app);
 
-  // Initialize WebSocket service for real-time data
-  console.log("🔌 Initializing WebSocket service for real-time data...");
-  websocketService.initialize(server);
-  console.log("✅ WebSocket service activated!");
+  server.on("error", (err) => {
+    if (err.code === "EADDRINUSE") {
+      if (retries > 0) {
+        console.warn(
+          `Port ${port} is in use, trying port ${port + 1} (retries left: ${retries - 1})...`
+        );
+        setTimeout(() => startServer(port + 1, retries - 1), 300);
+        return;
+      }
 
-  // Start real-time price updates (FREE)
-  console.log("🔄 Starting FREE real-time stock price updates...");
-  priceUpdateScheduler.startPriceUpdates();
-  console.log("✅ Real-time price updates activated!");
-});
+      console.error(
+        `Port ${port} is already in use and no retries remain. Please stop the other process or set a different PORT in your .env.`
+      );
+      console.error(
+        "To find the process using the port (Windows PowerShell): Get-Process -Id (Get-NetTCPConnection -LocalPort 5000).OwningProcess"
+      );
+      process.exit(1);
+    }
+
+    console.error("Server error:", err);
+    process.exit(1);
+  });
+
+  server.listen(port, () => {
+    console.log(`🚀 Server running in ${process.env.NODE_ENV} mode on port ${port}`);
+    console.log(`📊 Stock Market API: http://localhost:${port}`);
+    console.log(`🏥 Health Check: http://localhost:${port}/api/health`);
+
+    // Initialize WebSocket service for real-time data
+    console.log("🔌 Initializing WebSocket service for real-time data...");
+    websocketService.initialize(server);
+    console.log("✅ WebSocket service activated!");
+
+    // Start real-time price updates (FREE)
+    console.log("🔄 Starting FREE real-time stock price updates...");
+    priceUpdateScheduler.startPriceUpdates();
+    console.log("✅ Real-time price updates activated!");
+  });
+}
+
+startServer(PORT, 3);
 
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (err, promise) => {

@@ -201,10 +201,10 @@ userSchema.virtual("fullName").get(function () {
   return `${this.firstName} ${this.lastName}`;
 });
 
-// Index for better query performance
-userSchema.index({ email: 1 });
-userSchema.index({ phone: 1 });
-userSchema.index({ tradingAccountNumber: 1 });
+// Indexes for better query performance
+// Note: `email`, `phone`, and `tradingAccountNumber` are declared with
+// `unique: true` above which creates indexes automatically. Remove the
+// redundant explicit index declarations to avoid duplicate-index warnings.
 userSchema.index({ createdAt: -1 });
 
 // Pre-save middleware to hash password
