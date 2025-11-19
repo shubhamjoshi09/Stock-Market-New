@@ -224,9 +224,10 @@ const TradingPage = () => {
     try {
       const tradeData = {
         symbol: selectedStock.symbol,
-        action: tradeAction,
+        type: tradeAction.toLowerCase(), // FIXED → backend expects `type`
+        orderType: orderType.toLowerCase(), // FIXED → match backend enum
+        segment: "equity", // FIXED → backend requires segment
         quantity: parseInt(quantity),
-        orderType: orderType,
         price:
           orderType === "limit" ? parseFloat(limitPrice) : getCurrentPrice(),
       };

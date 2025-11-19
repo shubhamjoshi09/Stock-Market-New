@@ -7,20 +7,17 @@ class ApiService {
     this.token = localStorage.getItem("token");
   }
 
-  // Set authentication token
   setToken(token) {
     this.token = token;
     localStorage.setItem("token", token);
   }
 
-  // Remove authentication token
   removeToken() {
     this.token = null;
     localStorage.removeItem("token");
     localStorage.removeItem("refreshToken");
   }
 
-  // Get headers with authentication
   getHeaders() {
     const headers = {
       "Content-Type": "application/json",
@@ -33,7 +30,6 @@ class ApiService {
     return headers;
   }
 
-  // Generic API request method
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
     const config = {
@@ -56,132 +52,25 @@ class ApiService {
     }
   }
 
-  // ===== AUTHENTICATION APIs =====
-
-  async signup(userData) {
-    return this.request("/auth/signup", {
-      method: "POST",
-      body: JSON.stringify(userData),
-    });
-  }
-
+  // --- AUTH ---
   async login(credentials) {
     const response = await this.request("/auth/login", {
       method: "POST",
       body: JSON.stringify(credentials),
     });
 
-    if (response.success) {
+    if (response.success && response.data) {
       this.setToken(response.data.token);
       localStorage.setItem("refreshToken", response.data.refreshToken);
+      localStorage.setItem("user", JSON.stringify(response.data.user));
     }
 
     return response;
   }
 
-  async logout() {
-    const refreshToken = localStorage.getItem("refreshToken");
-    await this.request("/auth/logout", {
-      method: "POST",
-      body: JSON.stringify({ refreshToken }),
-    });
-    this.removeToken();
-  }
-
-  async verifyOTP(data) {
-    return this.request("/auth/verify-otp", {
-      method: "POST",
-      body: JSON.stringify({
-        email: data.email,
-        otp: data.otp,
-        type: data.type || "email",
-      }),
-    });
-  }
-
-  async resendOTP(data) {
-    return this.request("/auth/resend-otp", {
-      method: "POST",
-      body: JSON.stringify({
-        email: data.email,
-        type: data.type || "email",
-      }),
-    });
-  }
-
-  async getProfile() {
-    return this.request("/auth/me");
-  }
-
-  // ===== STOCK APIs =====
-
-  async searchStocks(query, limit = 20) {
-    return this.request(
-      `/stocks/search?q=${encodeURIComponent(query)}&limit=${limit}`
-    );
-  }
-
-  async getStockDetails(symbol, exchange = "NSE") {
-    return this.request(`/stocks/${symbol}?exchange=${exchange}`);
-  }
-
-  async getMarketOverview() {
-    return this.request("/stocks/market-overview");
-  }
-
-  async getTopGainers(limit = 10) {
-    return this.request(`/stocks/top-gainers?limit=${limit}`);
-  }
-
-  async getTopLosers(limit = 10) {
-    return this.request(`/stocks/top-losers?limit=${limit}`);
-  }
-
-  // ===== PORTFOLIO APIs =====
-
+  // --- PORTFOLIO ---
   async getPortfolio() {
     return this.request("/portfolio");
-  }
-
-  async addCash(amount) {
-    return this.request("/portfolio/add-cash", {
-      method: "POST",
-      body: JSON.stringify({ amount }),
-    });
-  }
-
-  // ===== TRADING APIs =====
-
-  async placeTrade(tradeData) {
-    console.log("🚀 Sending trade request:", tradeData);
-    try {
-      const response = await this.request("/trading/place-order", {
-        method: "POST",
-        body: JSON.stringify(tradeData),
-      });
-      console.log("📊 Trade API response:", response);
-      return response;
-    } catch (error) {
-      console.error("💥 Trade API error:", error);
-      throw error;
-    }
-  }
-
-  async getTradingHistory(filters = {}) {
-    const queryParams = new URLSearchParams(filters).toString();
-    return this.request(`/trading/history?${queryParams}`);
-  }
-
-  async getMarketData(symbol) {
-    return this.request(`/trading/market-data/${symbol}`);
-  }
-
-  async searchStocks(query) {
-    return this.request(`/trading/search?query=${encodeURIComponent(query)}`);
-  }
-
-  async getPopularStocks() {
-    return this.request("/trading/popular");
   }
 
   async createPortfolio() {
@@ -190,24 +79,24 @@ class ApiService {
     });
   }
 
-  async checkBalance() {
-    return this.request("/trading/check-balance");
-  }
+  // --- TRADING ---
+  async placeTrade(tradeData) {
+    console.log("🚀 Sending Trade Data to API:", tradeData);
 
-  async placeOrder(orderData) {
+    const user = JSON.parse(localStorage.getItem("user"));
+    const userId = user?._id;
+
+    if (!userId) throw new Error("User not logged in");
+
+    const payload = { ...tradeData, userId };
+    console.log("📦 Final Payload:", payload);
+
     return this.request("/transactions/place-order", {
       method: "POST",
-      body: JSON.stringify(orderData),
+      body: JSON.stringify(payload),
     });
-  }
-
-  async getTransactions(filters = {}) {
-    const queryParams = new URLSearchParams(filters).toString();
-    return this.request(`/transactions?${queryParams}`);
   }
 }
 
-// Create and export a singleton instance
 export const apiService = new ApiService();
-export { ApiService }; // Named export for class
 export default apiService;

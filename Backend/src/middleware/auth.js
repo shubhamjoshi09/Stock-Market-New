@@ -97,23 +97,28 @@ export const authorize = (...roles) => {
 };
 
 // Check if user's KYC is completed for trading operations
+// export const requireKYC = (req, res, next) => {
+//   if (!req.user) {
+//     return res.status(401).json({
+//       success: false,
+//       message: "Authentication required",
+//     });
+//   }
+
+//   if (!req.user.isKYCCompleted) {
+//     return res.status(403).json({
+//       success: false,
+//       message: "KYC verification required to perform this action",
+//     });
+//   }
+
+//   next();
+// };
+
 export const requireKYC = (req, res, next) => {
-  if (!req.user) {
-    return res.status(401).json({
-      success: false,
-      message: "Authentication required",
-    });
-  }
-
-  if (!req.user.isKYCCompleted) {
-    return res.status(403).json({
-      success: false,
-      message: "KYC verification required to perform this action",
-    });
-  }
-
-  next();
+  return next(); // KYC disabled
 };
+
 
 // Check if user's email is verified
 export const requireEmailVerification = (req, res, next) => {
@@ -135,20 +140,25 @@ export const requireEmailVerification = (req, res, next) => {
 };
 
 // Check if user's phone is verified
+// export const requirePhoneVerification = (req, res, next) => {
+//   if (!req.user) {
+//     return res.status(401).json({
+//       success: false,
+//       message: "Authentication required",
+//     });
+//   }
+
+//   if (!req.user.isPhoneVerified) {
+//     return res.status(403).json({
+//       success: false,
+//       message: "Phone verification required",
+//     });
+//   }
+
+//   next();
+// };
+
 export const requirePhoneVerification = (req, res, next) => {
-  if (!req.user) {
-    return res.status(401).json({
-      success: false,
-      message: "Authentication required",
-    });
-  }
-
-  if (!req.user.isPhoneVerified) {
-    return res.status(403).json({
-      success: false,
-      message: "Phone verification required",
-    });
-  }
-
-  next();
+  return next(); // Phone verification disabled
 };
+

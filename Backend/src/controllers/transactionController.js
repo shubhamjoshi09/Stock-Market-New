@@ -2,78 +2,102 @@ import Transaction from "../models/Transaction.js";
 import Portfolio from "../models/Portfolio.js";
 import Stock from "../models/Stock.js";
 
+// Utility to send validation error nicely
+const sendValidationError = (res, err) => {
+  if (err && err.name === "ValidationError") {
+    const details = {};
+    for (const key in err.errors) {
+      details[key] = err.errors[key].message;
+    }
+    return res.status(400).json({
+      success: false,
+      message: "Validation failed",
+      errors: details,
+    });
+  }
+  return null;
+};
+
 // @desc    Place a new order
 // @route   POST /api/transactions/place-order
 // @access  Private
 export const placeOrder = async (req, res, next) => {
   try {
-    const {
-      symbol,
-      type,
-      orderType,
-      quantity,
-      price,
-      limitPrice,
-      stopPrice,
-      segment = "equity",
-      validity = "day",
-    } = req.body;
+    // Parse and normalize incoming fields
+    const raw = req.body || {};
+    const symbol = (raw.symbol || "").toString().toUpperCase();
+    const type = (raw.type || raw.action || "").toString().toLowerCase(); // accept "action" too
+    const orderType = (raw.orderType || "").toString().toLowerCase();
+    const segment = (raw.segment || "equity").toString().toLowerCase();
+    const validity = (raw.validity || "day").toString().toLowerCase();
+    const quantity = Number(raw.quantity || 0);
+    const limitPrice = raw.limitPrice !== undefined ? Number(raw.limitPrice) : 0;
+    const stopPrice = raw.stopPrice !== undefined ? Number(raw.stopPrice) : 0;
+    let price = raw.price !== undefined ? Number(raw.price) : undefined;
 
-    // Get stock details
+    // Basic validations
+    if (!symbol) {
+      return res.status(400).json({ success: false, message: "Symbol is required" });
+    }
+    if (!["buy", "sell"].includes(type)) {
+      return res.status(400).json({ success: false, message: "type must be 'buy' or 'sell'" });
+    }
+    if (!["market", "limit", "stop_loss", "stop_loss_market"].includes(orderType)) {
+      return res.status(400).json({ success: false, message: "Invalid orderType" });
+    }
+    if (!["equity", "futures", "options", "currency", "commodity"].includes(segment)) {
+      return res.status(400).json({ success: false, message: "Invalid segment" });
+    }
+    if (!quantity || quantity < 1) {
+      return res.status(400).json({ success: false, message: "quantity must be >= 1" });
+    }
+    // For limit orders, ensure limitPrice exists
+    if (orderType === "limit" && (!limitPrice || limitPrice <= 0)) {
+      return res.status(400).json({ success: false, message: "Limit price is required for limit orders" });
+    }
+    if (orderType === "stop_loss" && (!stopPrice || stopPrice <= 0 || !limitPrice || limitPrice <= 0)) {
+      return res.status(400).json({ success: false, message: "Stop price and limit price are required for stop loss orders" });
+    }
+
+    // fetch stock
     const stock = await Stock.findOne({
-      symbol: symbol.toUpperCase(),
+      symbol,
       isActive: true,
       isTradable: true,
     });
 
     if (!stock) {
-      return res.status(404).json({
-        success: false,
-        message: "Stock not found or not tradable",
-      });
+      return res.status(404).json({ success: false, message: "Stock not found or not tradable" });
     }
 
-    // Get user's portfolio
+    // ensure portfolio exists
     let portfolio = await Portfolio.findOne({ userId: req.user._id });
     if (!portfolio) {
-      portfolio = await Portfolio.create({ userId: req.user._id });
+      portfolio = await Portfolio.create({ userId: req.user._id, availableCash: 0 });
     }
 
-    // Validate order based on type
-    let orderPrice = price || stock.currentPrice;
-
-    if (orderType === "limit" && !limitPrice) {
-      return res.status(400).json({
-        success: false,
-        message: "Limit price is required for limit orders",
-      });
+    // Determine order price (market uses current price)
+    if (orderType === "market") {
+      price = price !== undefined && price > 0 ? price : stock.currentPrice || 0;
+    } else if (!price || price <= 0) {
+      // for non-market, use provided limitPrice if not provided as price
+      price = limitPrice || price || stock.currentPrice || 0;
     }
 
-    if (orderType === "stop_loss" && (!stopPrice || !limitPrice)) {
-      return res.status(400).json({
-        success: false,
-        message: "Stop price and limit price are required for stop loss orders",
-      });
-    }
+    const grossAmount = quantity * price;
 
-    if (orderType === "limit") {
-      orderPrice = limitPrice;
-    }
-
-    const grossAmount = quantity * orderPrice;
-
-    // Create transaction object
+    // Build transaction payload
     const transactionData = {
       userId: req.user._id,
       orderId: `ORD${Date.now()}${Math.floor(Math.random() * 1000)}`,
-      symbol: symbol.toUpperCase(),
+      symbol,
       companyName: stock.companyName,
-      exchange: stock.exchange,
+      exchange: stock.exchange || "NSE",
       type,
       orderType,
       segment,
       quantity,
-      price: orderPrice,
+      price,
       limitPrice: limitPrice || 0,
       stopPrice: stopPrice || 0,
       grossAmount,
@@ -81,82 +105,94 @@ export const placeOrder = async (req, res, next) => {
       status: "pending",
       pendingQuantity: quantity,
       marketData: {
-        ltp: stock.currentPrice,
-        open: stock.openPrice,
-        high: stock.highPrice,
-        low: stock.lowPrice,
-        close: stock.previousClose,
-        volume: stock.volume,
+        ltp: stock.currentPrice || 0,
+        open: stock.openPrice || 0,
+        high: stock.highPrice || 0,
+        low: stock.lowPrice || 0,
+        close: stock.previousClose || 0,
+        volume: stock.volume || 0,
       },
     };
 
-    // Calculate charges
+    // create transaction instance and compute charges
     const transaction = new Transaction(transactionData);
     transaction.calculateCharges();
 
-    // Validate available funds for buy orders
+    // VALIDATIONS: funds / holdings
     if (type === "buy") {
-      const requiredAmount = transaction.netAmount;
+      const requiredAmount = transaction.netAmount || transaction.grossAmount || 0;
+      portfolio.availableCash = Number(portfolio.availableCash || 0);
       if (portfolio.availableCash < requiredAmount) {
         return res.status(400).json({
           success: false,
           message: "Insufficient funds",
-          data: {
-            required: requiredAmount,
-            available: portfolio.availableCash,
-            shortfall: requiredAmount - portfolio.availableCash,
-          },
+          data: { required: requiredAmount, available: portfolio.availableCash, shortfall: requiredAmount - portfolio.availableCash },
         });
       }
-
-      // Block the funds
-      portfolio.availableCash -= requiredAmount;
-      portfolio.usedMargin += requiredAmount;
+      // block funds
+      portfolio.availableCash = portfolio.availableCash - requiredAmount;
+      portfolio.usedMargin = (portfolio.usedMargin || 0) + requiredAmount;
     }
 
-    // Validate holdings for sell orders
     if (type === "sell") {
-      const existingHolding = portfolio.holdings.find(
-        (h) => h.symbol === symbol.toUpperCase()
-      );
+      const existingHolding = (portfolio.holdings || []).find((h) => h.symbol === symbol);
       if (!existingHolding || existingHolding.quantity < quantity) {
         return res.status(400).json({
           success: false,
           message: "Insufficient holdings",
-          data: {
-            required: quantity,
-            available: existingHolding ? existingHolding.quantity : 0,
-          },
+          data: { required: quantity, available: existingHolding ? existingHolding.quantity : 0 },
         });
       }
     }
 
-    // For market orders, execute immediately (simulation)
+    // Execute immediate for market orders (simulation)
     if (orderType === "market") {
       transaction.status = "completed";
       transaction.executedQuantity = quantity;
       transaction.pendingQuantity = 0;
-      transaction.averageExecutionPrice = stock.currentPrice;
+      transaction.averageExecutionPrice = stock.currentPrice || price;
       transaction.executedAt = new Date();
 
-      // Update portfolio
-      portfolio.updateHolding(
-        symbol.toUpperCase(),
-        quantity,
-        stock.currentPrice,
-        type
-      );
+      // Update portfolio holdings using helper (safe)
+      if (typeof portfolio.updateHolding === "function") {
+        portfolio.updateHolding(symbol, quantity, transaction.averageExecutionPrice, type);
+      } else {
+        // fallback manual: simple adjustment (best-effort)
+        const idx = (portfolio.holdings || []).findIndex((h) => h.symbol === symbol);
+        if (type === "buy") {
+          if (idx >= 0) {
+            const h = portfolio.holdings[idx];
+            const newQty = h.quantity + quantity;
+            const newAvg = (h.quantity * h.averagePrice + quantity * transaction.averageExecutionPrice) / newQty;
+            portfolio.holdings[idx].quantity = newQty;
+            portfolio.holdings[idx].averagePrice = newAvg;
+          } else {
+            portfolio.holdings.push({ symbol, quantity, averagePrice: transaction.averageExecutionPrice });
+          }
+        } else {
+          // sell
+          if (idx >= 0) {
+            const h = portfolio.holdings[idx];
+            if (h.quantity <= quantity) {
+              portfolio.holdings.splice(idx, 1);
+            } else {
+              portfolio.holdings[idx].quantity = h.quantity - quantity;
+            }
+          }
+        }
+      }
 
+      // For sells, credit available cash with net proceeds
       if (type === "sell") {
-        // Add proceeds to available cash
-        portfolio.availableCash += transaction.netAmount;
+        portfolio.availableCash = Number(portfolio.availableCash || 0) + Number(transaction.netAmount || transaction.grossAmount || 0);
       }
     }
 
+    // Save transaction & portfolio
     await transaction.save();
     await portfolio.save();
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: "Order placed successfully",
       data: {
@@ -168,32 +204,29 @@ export const placeOrder = async (req, res, next) => {
       },
     });
   } catch (error) {
+    // If mongoose validation error, return nice structure
+    if (error && error.name === "ValidationError") {
+      return sendValidationError(res, error);
+    }
+    // other errors => pass to next (global error handler)
     next(error);
   }
 };
+
+// --------- Other controllers left largely unchanged but with safe parsing ----------
 
 // @desc    Get user transactions
 // @route   GET /api/transactions
 // @access  Private
 export const getTransactions = async (req, res, next) => {
   try {
-    const {
-      page = 1,
-      limit = 20,
-      symbol,
-      type,
-      status,
-      segment,
-      startDate,
-      endDate,
-    } = req.query;
+    const { page = 1, limit = 20, symbol, type, status, segment, startDate, endDate } = req.query;
 
     const filters = { userId: req.user._id };
-
     if (symbol) filters.symbol = symbol.toUpperCase();
-    if (type) filters.type = type;
-    if (status) filters.status = status;
-    if (segment) filters.segment = segment;
+    if (type) filters.type = type.toLowerCase();
+    if (status) filters.status = status.toLowerCase();
+    if (segment) filters.segment = segment.toLowerCase();
 
     if (startDate || endDate) {
       filters.orderPlacedAt = {};
@@ -203,8 +236,8 @@ export const getTransactions = async (req, res, next) => {
 
     const transactions = await Transaction.find(filters)
       .sort({ orderPlacedAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .limit(Number(limit))
+      .skip((Number(page) - 1) * Number(limit));
 
     const total = await Transaction.countDocuments(filters);
 
@@ -237,18 +270,10 @@ export const getTransactionById = async (req, res, next) => {
     });
 
     if (!transaction) {
-      return res.status(404).json({
-        success: false,
-        message: "Transaction not found",
-      });
+      return res.status(404).json({ success: false, message: "Transaction not found" });
     }
 
-    res.status(200).json({
-      success: true,
-      data: {
-        transaction,
-      },
-    });
+    res.status(200).json({ success: true, data: { transaction } });
   } catch (error) {
     next(error);
   }
@@ -260,52 +285,34 @@ export const getTransactionById = async (req, res, next) => {
 export const cancelOrder = async (req, res, next) => {
   try {
     const { cancelReason } = req.body;
-
-    const transaction = await Transaction.findOne({
-      _id: req.params.id,
-      userId: req.user._id,
-    });
+    const transaction = await Transaction.findOne({ _id: req.params.id, userId: req.user._id });
 
     if (!transaction) {
-      return res.status(404).json({
-        success: false,
-        message: "Transaction not found",
-      });
+      return res.status(404).json({ success: false, message: "Transaction not found" });
     }
 
     if (!["pending", "open", "partial"].includes(transaction.status)) {
-      return res.status(400).json({
-        success: false,
-        message: "Order cannot be cancelled",
-      });
+      return res.status(400).json({ success: false, message: "Order cannot be cancelled" });
     }
-
-    // Update transaction status
-    transaction.status = "cancelled";
-    transaction.cancelReason = cancelReason || "Cancelled by user";
 
     // Refund blocked amount for buy orders
     if (transaction.type === "buy" && transaction.pendingQuantity > 0) {
       const portfolio = await Portfolio.findOne({ userId: req.user._id });
       if (portfolio) {
-        const refundAmount =
-          (transaction.pendingQuantity / transaction.quantity) *
-          transaction.netAmount;
-        portfolio.availableCash += refundAmount;
-        portfolio.usedMargin -= refundAmount;
+        const refundAmount = (transaction.pendingQuantity / transaction.quantity) * transaction.netAmount;
+        portfolio.availableCash = Number(portfolio.availableCash || 0) + Number(refundAmount || 0);
+        portfolio.usedMargin = Math.max(0, Number(portfolio.usedMargin || 0) - Number(refundAmount || 0));
         await portfolio.save();
       }
     }
 
+    // For sell orders: nothing to unblock (holdings remained until execution) - if your design blocked holdings, you'd restore here.
+
+    transaction.status = "cancelled";
+    transaction.cancelReason = cancelReason || "Cancelled by user";
     await transaction.save();
 
-    res.status(200).json({
-      success: true,
-      message: "Order cancelled successfully",
-      data: {
-        transaction,
-      },
-    });
+    res.status(200).json({ success: true, message: "Order cancelled successfully", data: { transaction } });
   } catch (error) {
     next(error);
   }
@@ -318,40 +325,42 @@ export const modifyOrder = async (req, res, next) => {
   try {
     const { quantity, price, limitPrice, stopPrice } = req.body;
 
-    const originalTransaction = await Transaction.findOne({
-      _id: req.params.id,
-      userId: req.user._id,
-    });
+    const originalTransaction = await Transaction.findOne({ _id: req.params.id, userId: req.user._id });
 
     if (!originalTransaction) {
-      return res.status(404).json({
-        success: false,
-        message: "Transaction not found",
-      });
+      return res.status(404).json({ success: false, message: "Transaction not found" });
     }
 
     if (!["pending", "open", "partial"].includes(originalTransaction.status)) {
-      return res.status(400).json({
-        success: false,
-        message: "Order cannot be modified",
-      });
+      return res.status(400).json({ success: false, message: "Order cannot be modified" });
     }
 
-    // Cancel original order
+    // Cancel original order and refund/block adjustments
     originalTransaction.status = "cancelled";
     originalTransaction.cancelReason = "Modified by user";
     await originalTransaction.save();
 
-    // Create new order with modified parameters
+    // If buy order had blocked funds, refund them (proportionally)
+    if (originalTransaction.type === "buy" && originalTransaction.pendingQuantity > 0) {
+      const portfolio = await Portfolio.findOne({ userId: req.user._id });
+      if (portfolio) {
+        const refundAmount = (originalTransaction.pendingQuantity / originalTransaction.quantity) * originalTransaction.netAmount;
+        portfolio.availableCash = Number(portfolio.availableCash || 0) + Number(refundAmount || 0);
+        portfolio.usedMargin = Math.max(0, Number(portfolio.usedMargin || 0) - Number(refundAmount || 0));
+        await portfolio.save();
+      }
+    }
+
+    // Create new order object using modified params
     const modifiedOrderData = {
       ...originalTransaction.toObject(),
       _id: undefined,
       transactionId: undefined,
       orderId: `ORD${Date.now()}${Math.floor(Math.random() * 1000)}`,
-      quantity: quantity || originalTransaction.quantity,
-      price: price || originalTransaction.price,
-      limitPrice: limitPrice || originalTransaction.limitPrice,
-      stopPrice: stopPrice || originalTransaction.stopPrice,
+      quantity: Number(quantity || originalTransaction.quantity),
+      price: price !== undefined ? Number(price) : originalTransaction.price,
+      limitPrice: limitPrice !== undefined ? Number(limitPrice) : originalTransaction.limitPrice,
+      stopPrice: stopPrice !== undefined ? Number(stopPrice) : originalTransaction.stopPrice,
       status: "pending",
       modifiedFrom: originalTransaction._id,
       orderPlacedAt: new Date(),
@@ -362,15 +371,9 @@ export const modifyOrder = async (req, res, next) => {
     newTransaction.calculateCharges();
     await newTransaction.save();
 
-    res.status(200).json({
-      success: true,
-      message: "Order modified successfully",
-      data: {
-        originalTransaction,
-        newTransaction,
-      },
-    });
+    res.status(200).json({ success: true, message: "Order modified successfully", data: { originalTransaction, newTransaction } });
   } catch (error) {
+    if (error && error.name === "ValidationError") return sendValidationError(res, error);
     next(error);
   }
 };
@@ -380,18 +383,8 @@ export const modifyOrder = async (req, res, next) => {
 // @access  Private
 export const getOrderBook = async (req, res, next) => {
   try {
-    const pendingOrders = await Transaction.find({
-      userId: req.user._id,
-      status: { $in: ["pending", "open", "partial"] },
-    }).sort({ orderPlacedAt: -1 });
-
-    res.status(200).json({
-      success: true,
-      data: {
-        orders: pendingOrders,
-        count: pendingOrders.length,
-      },
-    });
+    const pendingOrders = await Transaction.find({ userId: req.user._id, status: { $in: ["pending", "open", "partial"] } }).sort({ orderPlacedAt: -1 });
+    res.status(200).json({ success: true, data: { orders: pendingOrders, count: pendingOrders.length } });
   } catch (error) {
     next(error);
   }
@@ -404,42 +397,25 @@ export const getTradeHistory = async (req, res, next) => {
   try {
     const { page = 1, limit = 20, startDate, endDate } = req.query;
 
-    const filters = {
-      userId: req.user._id,
-      status: "completed",
-    };
-
+    const filters = { userId: req.user._id, status: "completed" };
     if (startDate || endDate) {
       filters.executedAt = {};
       if (startDate) filters.executedAt.$gte = new Date(startDate);
       if (endDate) filters.executedAt.$lte = new Date(endDate);
     }
 
-    const trades = await Transaction.find(filters)
-      .sort({ executedAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-
+    const trades = await Transaction.find(filters).sort({ executedAt: -1 }).limit(Number(limit)).skip((Number(page) - 1) * Number(limit));
     const total = await Transaction.countDocuments(filters);
 
-    // Calculate summary statistics
     const summary = await Transaction.aggregate([
       { $match: filters },
       {
         $group: {
           _id: null,
           totalTrades: { $sum: 1 },
-          totalBuyValue: {
-            $sum: {
-              $cond: [{ $eq: ["$type", "buy"] }, "$netAmount", 0],
-            },
-          },
-          totalSellValue: {
-            $sum: {
-              $cond: [{ $eq: ["$type", "sell"] }, "$netAmount", 0],
-            },
-          },
-          totalCharges: { $sum: "$charges.totalCharges" },
+          totalBuyValue: { $sum: { $cond: [{ $eq: ["$type", "buy"] }, "$netAmount", 0] } },
+          totalSellValue: { $sum: { $cond: [{ $eq: ["$type", "sell"] }, "$netAmount", 0] } },
+          totalCharges: { $sum: { $ifNull: ["$charges.totalCharges", 0] } },
         },
       },
     ]);
@@ -448,19 +424,8 @@ export const getTradeHistory = async (req, res, next) => {
       success: true,
       data: {
         trades,
-        summary: summary[0] || {
-          totalTrades: 0,
-          totalBuyValue: 0,
-          totalSellValue: 0,
-          totalCharges: 0,
-        },
-        pagination: {
-          currentPage: parseInt(page),
-          totalPages: Math.ceil(total / limit),
-          totalItems: total,
-          hasNextPage: page < Math.ceil(total / limit),
-          hasPrevPage: page > 1,
-        },
+        summary: summary[0] || { totalTrades: 0, totalBuyValue: 0, totalSellValue: 0, totalCharges: 0 },
+        pagination: { currentPage: parseInt(page), totalPages: Math.ceil(total / limit), totalItems: total, hasNextPage: page < Math.ceil(total / limit), hasPrevPage: page > 1 },
       },
     });
   } catch (error) {

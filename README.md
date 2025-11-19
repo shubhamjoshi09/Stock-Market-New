@@ -134,7 +134,7 @@ Make sure MongoDB is running before starting the backend server.
 - `POST /api/auth/signup` - User registration
 - `POST /api/auth/login` - User login
 - `GET /api/portfolio` - Get user portfolio
-- `POST /api/trading/place-order` - Place buy/sell order
+- `POST /api/trading/place-order` - Place buy/sell order    
 - `GET /api/trading/history` - Get transaction history
 
 ## Contributing

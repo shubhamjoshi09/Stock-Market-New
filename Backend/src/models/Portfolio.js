@@ -256,3 +256,79 @@ portfolioSchema.methods.updateCurrentPrices = function (priceData) {
 const Portfolio = mongoose.model("Portfolio", portfolioSchema);
 
 export default Portfolio;
+
+// import mongoose from "mongoose";
+
+// const holdingSchema = new mongoose.Schema({
+//   symbol: { type: String, required: true, uppercase: true },
+//   quantity: { type: Number, required: true, min: 0 },
+//   averagePrice: { type: Number, required: true, min: 0 },
+// });
+
+// const portfolioSchema = new mongoose.Schema(
+//   {
+//     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true },
+//     availableCash: { type: Number, default: 0, min: 0 },
+//     usedMargin: { type: Number, default: 0, min: 0 },
+//     totalInvested: { type: Number, default: 0, min: 0 },
+//     holdings: { type: [holdingSchema], default: [] },
+//   },
+//   { timestamps: true }
+// );
+
+// // Helper: recalculate totals (safe)
+// portfolioSchema.methods.recalculate = function () {
+//   this.totalInvested = this.holdings.reduce((sum, h) => sum + (h.averagePrice || 0) * (h.quantity || 0), 0);
+//   if (this.availableCash < 0) this.availableCash = 0;
+//   if (this.usedMargin < 0) this.usedMargin = 0;
+// };
+
+// // Update holdings (buy or sell)
+// // - symbol: string
+// // - qty: positive integer
+// // - price: price per unit
+// // - type: "buy" or "sell"
+// portfolioSchema.methods.updateHolding = function (symbol, qty, price, type) {
+//   if (!symbol) return;
+//   symbol = symbol.toUpperCase();
+//   qty = Number(qty) || 0;
+//   price = Number(price) || 0;
+
+//   // find existing
+//   const idx = this.holdings.findIndex((h) => h.symbol === symbol);
+//   const existing = idx >= 0 ? this.holdings[idx] : null;
+
+//   if (type === "buy") {
+//     if (existing) {
+//       // new average = (oldQty*oldAvg + qty*price) / (oldQty + qty)
+//       const oldQty = existing.quantity || 0;
+//       const oldAvg = existing.averagePrice || 0;
+//       const newQty = oldQty + qty;
+//       const newAvg = newQty > 0 ? (oldQty * oldAvg + qty * price) / newQty : price;
+//       existing.quantity = newQty;
+//       existing.averagePrice = newAvg;
+//       this.holdings[idx] = existing;
+//     } else {
+//       this.holdings.push({ symbol, quantity: qty, averagePrice: price });
+//     }
+//   } else if (type === "sell") {
+//     if (!existing) {
+//       // nothing to sell — should be validated earlier
+//       return;
+//     }
+//     if (existing.quantity <= qty) {
+//       // remove holding entirely
+//       this.holdings.splice(idx, 1);
+//     } else {
+//       existing.quantity = existing.quantity - qty;
+//       // averagePrice stays same for sells
+//       this.holdings[idx] = existing;
+//     }
+//   }
+
+//   // Recalculate totals
+//   this.recalculate();
+// };
+
+// const Portfolio = mongoose.model("Portfolio", portfolioSchema);
+// export default Portfolio;
