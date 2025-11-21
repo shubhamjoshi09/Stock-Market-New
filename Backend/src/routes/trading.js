@@ -102,35 +102,65 @@ router.post("/place-order", async (req, res) => {
     if (!portfolio)
       return res.status(404).json({ error: "Portfolio not found" });
 
-    if (action === "BUY" && user.balance < totalValue) {
+    if (action === "BUY" && portfolio.availableCash < totalValue) {
       return res.status(400).json({ error: "Insufficient balance" });
     }
 
-    // Update balance and portfolio
+    // Update portfolio cash and holdings
     if (action === "BUY") {
-      user.balance -= totalValue;
-      const existingStock = portfolio.stocks.find((s) => s.symbol === symbol);
-      if (existingStock) {
-        existingStock.quantity += quantity;
-        existingStock.averagePrice =
-          (existingStock.averagePrice + currentPrice) / 2;
+      // Deduct from portfolio available cash
+      portfolio.availableCash = parseFloat(
+        (portfolio.availableCash - totalValue).toFixed(2)
+      );
+
+      // Ensure symbol casing matches schema
+      const sym = String(symbol).toUpperCase();
+      const existingHolding = portfolio.holdings.find((s) => s.symbol === sym);
+
+      if (existingHolding) {
+        // Recalculate invested amount and average price
+        existingHolding.quantity += quantity;
+        existingHolding.investedAmount =
+          (existingHolding.investedAmount || 0) + quantity * currentPrice;
+        existingHolding.averagePrice =
+          existingHolding.investedAmount / existingHolding.quantity;
+        existingHolding.currentPrice = currentPrice;
+        existingHolding.currentValue = existingHolding.quantity * currentPrice;
       } else {
-        portfolio.stocks.push({ symbol, quantity, averagePrice: currentPrice });
+        // Add new holding with required fields
+        portfolio.holdings.push({
+          symbol: sym,
+          companyName: sym,
+          exchange: "NSE",
+          quantity,
+          averagePrice: currentPrice,
+          investedAmount: quantity * currentPrice,
+          currentPrice: currentPrice,
+          currentValue: quantity * currentPrice,
+          lastUpdated: new Date(),
+        });
       }
     } else if (action === "SELL") {
-      const stockIndex = portfolio.stocks.findIndex((s) => s.symbol === symbol);
-      if (
-        stockIndex === -1 ||
-        portfolio.stocks[stockIndex].quantity < quantity
-      ) {
+      const sym = String(symbol).toUpperCase();
+      const holdingIndex = portfolio.holdings.findIndex((s) => s.symbol === sym);
+      if (holdingIndex === -1 || portfolio.holdings[holdingIndex].quantity < quantity) {
         return res.status(400).json({ error: "Not enough shares to sell" });
       }
 
-      portfolio.stocks[stockIndex].quantity -= quantity;
-      user.balance += totalValue;
+      const holding = portfolio.holdings[holdingIndex];
+      // Reduce quantity and update invested amount based on averagePrice
+      holding.quantity -= quantity;
+      holding.investedAmount = holding.quantity * holding.averagePrice;
+      holding.currentPrice = currentPrice;
+      holding.currentValue = holding.quantity * currentPrice;
 
-      if (portfolio.stocks[stockIndex].quantity === 0) {
-        portfolio.stocks.splice(stockIndex, 1);
+      // Credit cash to portfolio
+      portfolio.availableCash = parseFloat(
+        (portfolio.availableCash + totalValue).toFixed(2)
+      );
+
+      if (holding.quantity <= 0) {
+        portfolio.holdings.splice(holdingIndex, 1);
       }
     }
 
@@ -170,7 +200,7 @@ router.post("/place-order", async (req, res) => {
     res.status(200).json({
       message: "Trade executed successfully",
       transaction,
-      balance: user.balance,
+      balance: portfolio.availableCash,
     });
   } catch (err) {
     console.error("Error placing trade:", err);
