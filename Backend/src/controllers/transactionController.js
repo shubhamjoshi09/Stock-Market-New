@@ -31,54 +31,93 @@ export const placeOrder = async (req, res, next) => {
     const segment = (raw.segment || "equity").toString().toLowerCase();
     const validity = (raw.validity || "day").toString().toLowerCase();
     const quantity = Number(raw.quantity || 0);
-    const limitPrice = raw.limitPrice !== undefined ? Number(raw.limitPrice) : 0;
+    const limitPrice =
+      raw.limitPrice !== undefined ? Number(raw.limitPrice) : 0;
     const stopPrice = raw.stopPrice !== undefined ? Number(raw.stopPrice) : 0;
     let price = raw.price !== undefined ? Number(raw.price) : undefined;
 
     // Basic validations
     if (!symbol) {
-      return res.status(400).json({ success: false, message: "Symbol is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Symbol is required" });
     }
     if (!["buy", "sell"].includes(type)) {
-      return res.status(400).json({ success: false, message: "type must be 'buy' or 'sell'" });
+      return res
+        .status(400)
+        .json({ success: false, message: "type must be 'buy' or 'sell'" });
     }
-    if (!["market", "limit", "stop_loss", "stop_loss_market"].includes(orderType)) {
-      return res.status(400).json({ success: false, message: "Invalid orderType" });
+    if (
+      !["market", "limit", "stop_loss", "stop_loss_market"].includes(orderType)
+    ) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid orderType" });
     }
-    if (!["equity", "futures", "options", "currency", "commodity"].includes(segment)) {
-      return res.status(400).json({ success: false, message: "Invalid segment" });
+    if (
+      !["equity", "futures", "options", "currency", "commodity"].includes(
+        segment
+      )
+    ) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid segment" });
     }
     if (!quantity || quantity < 1) {
-      return res.status(400).json({ success: false, message: "quantity must be >= 1" });
+      return res
+        .status(400)
+        .json({ success: false, message: "quantity must be >= 1" });
     }
     // For limit orders, ensure limitPrice exists
     if (orderType === "limit" && (!limitPrice || limitPrice <= 0)) {
-      return res.status(400).json({ success: false, message: "Limit price is required for limit orders" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Limit price is required for limit orders",
+        });
     }
-    if (orderType === "stop_loss" && (!stopPrice || stopPrice <= 0 || !limitPrice || limitPrice <= 0)) {
-      return res.status(400).json({ success: false, message: "Stop price and limit price are required for stop loss orders" });
+    if (
+      orderType === "stop_loss" &&
+      (!stopPrice || stopPrice <= 0 || !limitPrice || limitPrice <= 0)
+    ) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message:
+            "Stop price and limit price are required for stop loss orders",
+        });
     }
 
-    // fetch stock
+    // fetch stock (live-data only)
+    // Try exact match first, then fallback to prefix-before-dot (e.g., 'TCS.NS' -> 'TCS')
+    const prefix = (symbol || "").split(".")[0];
     const stock = await Stock.findOne({
-      symbol,
+      $or: [{ symbol }, { symbol: prefix }],
       isActive: true,
       isTradable: true,
     });
 
     if (!stock) {
-      return res.status(404).json({ success: false, message: "Stock not found or not tradable" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Stock not found or not tradable" });
     }
 
     // ensure portfolio exists
     let portfolio = await Portfolio.findOne({ userId: req.user._id });
     if (!portfolio) {
-      portfolio = await Portfolio.create({ userId: req.user._id, availableCash: 0 });
+      portfolio = await Portfolio.create({
+        userId: req.user._id,
+        availableCash: 0,
+      });
     }
 
     // Determine order price (market uses current price)
     if (orderType === "market") {
-      price = price !== undefined && price > 0 ? price : stock.currentPrice || 0;
+      price =
+        price !== undefined && price > 0 ? price : stock.currentPrice || 0;
     } else if (!price || price <= 0) {
       // for non-market, use provided limitPrice if not provided as price
       price = limitPrice || price || stock.currentPrice || 0;
@@ -120,13 +159,18 @@ export const placeOrder = async (req, res, next) => {
 
     // VALIDATIONS: funds / holdings
     if (type === "buy") {
-      const requiredAmount = transaction.netAmount || transaction.grossAmount || 0;
+      const requiredAmount =
+        transaction.netAmount || transaction.grossAmount || 0;
       portfolio.availableCash = Number(portfolio.availableCash || 0);
       if (portfolio.availableCash < requiredAmount) {
         return res.status(400).json({
           success: false,
           message: "Insufficient funds",
-          data: { required: requiredAmount, available: portfolio.availableCash, shortfall: requiredAmount - portfolio.availableCash },
+          data: {
+            required: requiredAmount,
+            available: portfolio.availableCash,
+            shortfall: requiredAmount - portfolio.availableCash,
+          },
         });
       }
       // block funds
@@ -135,12 +179,17 @@ export const placeOrder = async (req, res, next) => {
     }
 
     if (type === "sell") {
-      const existingHolding = (portfolio.holdings || []).find((h) => h.symbol === symbol);
+      const existingHolding = (portfolio.holdings || []).find(
+        (h) => h.symbol === symbol
+      );
       if (!existingHolding || existingHolding.quantity < quantity) {
         return res.status(400).json({
           success: false,
           message: "Insufficient holdings",
-          data: { required: quantity, available: existingHolding ? existingHolding.quantity : 0 },
+          data: {
+            required: quantity,
+            available: existingHolding ? existingHolding.quantity : 0,
+          },
         });
       }
     }
@@ -155,19 +204,37 @@ export const placeOrder = async (req, res, next) => {
 
       // Update portfolio holdings using helper (safe)
       if (typeof portfolio.updateHolding === "function") {
-        portfolio.updateHolding(symbol, quantity, transaction.averageExecutionPrice, type);
+        portfolio.updateHolding(
+          symbol,
+          quantity,
+          transaction.averageExecutionPrice,
+          type,
+          {
+            companyName: stock.companyName,
+            exchange: stock.exchange,
+          }
+        );
       } else {
         // fallback manual: simple adjustment (best-effort)
-        const idx = (portfolio.holdings || []).findIndex((h) => h.symbol === symbol);
+        const idx = (portfolio.holdings || []).findIndex(
+          (h) => h.symbol === symbol
+        );
         if (type === "buy") {
           if (idx >= 0) {
             const h = portfolio.holdings[idx];
             const newQty = h.quantity + quantity;
-            const newAvg = (h.quantity * h.averagePrice + quantity * transaction.averageExecutionPrice) / newQty;
+            const newAvg =
+              (h.quantity * h.averagePrice +
+                quantity * transaction.averageExecutionPrice) /
+              newQty;
             portfolio.holdings[idx].quantity = newQty;
             portfolio.holdings[idx].averagePrice = newAvg;
           } else {
-            portfolio.holdings.push({ symbol, quantity, averagePrice: transaction.averageExecutionPrice });
+            portfolio.holdings.push({
+              symbol,
+              quantity,
+              averagePrice: transaction.averageExecutionPrice,
+            });
           }
         } else {
           // sell
@@ -184,7 +251,9 @@ export const placeOrder = async (req, res, next) => {
 
       // For sells, credit available cash with net proceeds
       if (type === "sell") {
-        portfolio.availableCash = Number(portfolio.availableCash || 0) + Number(transaction.netAmount || transaction.grossAmount || 0);
+        portfolio.availableCash =
+          Number(portfolio.availableCash || 0) +
+          Number(transaction.netAmount || transaction.grossAmount || 0);
       }
     }
 
@@ -220,7 +289,16 @@ export const placeOrder = async (req, res, next) => {
 // @access  Private
 export const getTransactions = async (req, res, next) => {
   try {
-    const { page = 1, limit = 20, symbol, type, status, segment, startDate, endDate } = req.query;
+    const {
+      page = 1,
+      limit = 20,
+      symbol,
+      type,
+      status,
+      segment,
+      startDate,
+      endDate,
+    } = req.query;
 
     const filters = { userId: req.user._id };
     if (symbol) filters.symbol = symbol.toUpperCase();
@@ -270,7 +348,9 @@ export const getTransactionById = async (req, res, next) => {
     });
 
     if (!transaction) {
-      return res.status(404).json({ success: false, message: "Transaction not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Transaction not found" });
     }
 
     res.status(200).json({ success: true, data: { transaction } });
@@ -285,23 +365,36 @@ export const getTransactionById = async (req, res, next) => {
 export const cancelOrder = async (req, res, next) => {
   try {
     const { cancelReason } = req.body;
-    const transaction = await Transaction.findOne({ _id: req.params.id, userId: req.user._id });
+    const transaction = await Transaction.findOne({
+      _id: req.params.id,
+      userId: req.user._id,
+    });
 
     if (!transaction) {
-      return res.status(404).json({ success: false, message: "Transaction not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Transaction not found" });
     }
 
     if (!["pending", "open", "partial"].includes(transaction.status)) {
-      return res.status(400).json({ success: false, message: "Order cannot be cancelled" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Order cannot be cancelled" });
     }
 
     // Refund blocked amount for buy orders
     if (transaction.type === "buy" && transaction.pendingQuantity > 0) {
       const portfolio = await Portfolio.findOne({ userId: req.user._id });
       if (portfolio) {
-        const refundAmount = (transaction.pendingQuantity / transaction.quantity) * transaction.netAmount;
-        portfolio.availableCash = Number(portfolio.availableCash || 0) + Number(refundAmount || 0);
-        portfolio.usedMargin = Math.max(0, Number(portfolio.usedMargin || 0) - Number(refundAmount || 0));
+        const refundAmount =
+          (transaction.pendingQuantity / transaction.quantity) *
+          transaction.netAmount;
+        portfolio.availableCash =
+          Number(portfolio.availableCash || 0) + Number(refundAmount || 0);
+        portfolio.usedMargin = Math.max(
+          0,
+          Number(portfolio.usedMargin || 0) - Number(refundAmount || 0)
+        );
         await portfolio.save();
       }
     }
@@ -312,7 +405,13 @@ export const cancelOrder = async (req, res, next) => {
     transaction.cancelReason = cancelReason || "Cancelled by user";
     await transaction.save();
 
-    res.status(200).json({ success: true, message: "Order cancelled successfully", data: { transaction } });
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Order cancelled successfully",
+        data: { transaction },
+      });
   } catch (error) {
     next(error);
   }
@@ -325,14 +424,21 @@ export const modifyOrder = async (req, res, next) => {
   try {
     const { quantity, price, limitPrice, stopPrice } = req.body;
 
-    const originalTransaction = await Transaction.findOne({ _id: req.params.id, userId: req.user._id });
+    const originalTransaction = await Transaction.findOne({
+      _id: req.params.id,
+      userId: req.user._id,
+    });
 
     if (!originalTransaction) {
-      return res.status(404).json({ success: false, message: "Transaction not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Transaction not found" });
     }
 
     if (!["pending", "open", "partial"].includes(originalTransaction.status)) {
-      return res.status(400).json({ success: false, message: "Order cannot be modified" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Order cannot be modified" });
     }
 
     // Cancel original order and refund/block adjustments
@@ -341,12 +447,21 @@ export const modifyOrder = async (req, res, next) => {
     await originalTransaction.save();
 
     // If buy order had blocked funds, refund them (proportionally)
-    if (originalTransaction.type === "buy" && originalTransaction.pendingQuantity > 0) {
+    if (
+      originalTransaction.type === "buy" &&
+      originalTransaction.pendingQuantity > 0
+    ) {
       const portfolio = await Portfolio.findOne({ userId: req.user._id });
       if (portfolio) {
-        const refundAmount = (originalTransaction.pendingQuantity / originalTransaction.quantity) * originalTransaction.netAmount;
-        portfolio.availableCash = Number(portfolio.availableCash || 0) + Number(refundAmount || 0);
-        portfolio.usedMargin = Math.max(0, Number(portfolio.usedMargin || 0) - Number(refundAmount || 0));
+        const refundAmount =
+          (originalTransaction.pendingQuantity / originalTransaction.quantity) *
+          originalTransaction.netAmount;
+        portfolio.availableCash =
+          Number(portfolio.availableCash || 0) + Number(refundAmount || 0);
+        portfolio.usedMargin = Math.max(
+          0,
+          Number(portfolio.usedMargin || 0) - Number(refundAmount || 0)
+        );
         await portfolio.save();
       }
     }
@@ -359,8 +474,14 @@ export const modifyOrder = async (req, res, next) => {
       orderId: `ORD${Date.now()}${Math.floor(Math.random() * 1000)}`,
       quantity: Number(quantity || originalTransaction.quantity),
       price: price !== undefined ? Number(price) : originalTransaction.price,
-      limitPrice: limitPrice !== undefined ? Number(limitPrice) : originalTransaction.limitPrice,
-      stopPrice: stopPrice !== undefined ? Number(stopPrice) : originalTransaction.stopPrice,
+      limitPrice:
+        limitPrice !== undefined
+          ? Number(limitPrice)
+          : originalTransaction.limitPrice,
+      stopPrice:
+        stopPrice !== undefined
+          ? Number(stopPrice)
+          : originalTransaction.stopPrice,
       status: "pending",
       modifiedFrom: originalTransaction._id,
       orderPlacedAt: new Date(),
@@ -371,9 +492,16 @@ export const modifyOrder = async (req, res, next) => {
     newTransaction.calculateCharges();
     await newTransaction.save();
 
-    res.status(200).json({ success: true, message: "Order modified successfully", data: { originalTransaction, newTransaction } });
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Order modified successfully",
+        data: { originalTransaction, newTransaction },
+      });
   } catch (error) {
-    if (error && error.name === "ValidationError") return sendValidationError(res, error);
+    if (error && error.name === "ValidationError")
+      return sendValidationError(res, error);
     next(error);
   }
 };
@@ -383,8 +511,16 @@ export const modifyOrder = async (req, res, next) => {
 // @access  Private
 export const getOrderBook = async (req, res, next) => {
   try {
-    const pendingOrders = await Transaction.find({ userId: req.user._id, status: { $in: ["pending", "open", "partial"] } }).sort({ orderPlacedAt: -1 });
-    res.status(200).json({ success: true, data: { orders: pendingOrders, count: pendingOrders.length } });
+    const pendingOrders = await Transaction.find({
+      userId: req.user._id,
+      status: { $in: ["pending", "open", "partial"] },
+    }).sort({ orderPlacedAt: -1 });
+    res
+      .status(200)
+      .json({
+        success: true,
+        data: { orders: pendingOrders, count: pendingOrders.length },
+      });
   } catch (error) {
     next(error);
   }
@@ -404,7 +540,10 @@ export const getTradeHistory = async (req, res, next) => {
       if (endDate) filters.executedAt.$lte = new Date(endDate);
     }
 
-    const trades = await Transaction.find(filters).sort({ executedAt: -1 }).limit(Number(limit)).skip((Number(page) - 1) * Number(limit));
+    const trades = await Transaction.find(filters)
+      .sort({ executedAt: -1 })
+      .limit(Number(limit))
+      .skip((Number(page) - 1) * Number(limit));
     const total = await Transaction.countDocuments(filters);
 
     const summary = await Transaction.aggregate([
@@ -413,8 +552,12 @@ export const getTradeHistory = async (req, res, next) => {
         $group: {
           _id: null,
           totalTrades: { $sum: 1 },
-          totalBuyValue: { $sum: { $cond: [{ $eq: ["$type", "buy"] }, "$netAmount", 0] } },
-          totalSellValue: { $sum: { $cond: [{ $eq: ["$type", "sell"] }, "$netAmount", 0] } },
+          totalBuyValue: {
+            $sum: { $cond: [{ $eq: ["$type", "buy"] }, "$netAmount", 0] },
+          },
+          totalSellValue: {
+            $sum: { $cond: [{ $eq: ["$type", "sell"] }, "$netAmount", 0] },
+          },
           totalCharges: { $sum: { $ifNull: ["$charges.totalCharges", 0] } },
         },
       },
@@ -424,8 +567,19 @@ export const getTradeHistory = async (req, res, next) => {
       success: true,
       data: {
         trades,
-        summary: summary[0] || { totalTrades: 0, totalBuyValue: 0, totalSellValue: 0, totalCharges: 0 },
-        pagination: { currentPage: parseInt(page), totalPages: Math.ceil(total / limit), totalItems: total, hasNextPage: page < Math.ceil(total / limit), hasPrevPage: page > 1 },
+        summary: summary[0] || {
+          totalTrades: 0,
+          totalBuyValue: 0,
+          totalSellValue: 0,
+          totalCharges: 0,
+        },
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+          hasNextPage: page < Math.ceil(total / limit),
+          hasPrevPage: page > 1,
+        },
       },
     });
   } catch (error) {

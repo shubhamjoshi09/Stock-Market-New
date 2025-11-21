@@ -59,12 +59,20 @@ app.use("/api/", limiter);
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
+    // Development: allow local frontend automatically to reduce friction.
+    const devAllow = process.env.NODE_ENV !== "production";
+
     const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [
       "http://localhost:5173",
     ];
 
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
+
+    // If running in development, allow localhost origins to simplify testing
+    if (devAllow && /localhost|127\.0\.0\.1/.test(origin)) {
+      return callback(null, true);
+    }
 
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
@@ -79,6 +87,9 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+// Ensure preflight OPTIONS are handled for all routes (helpful for CORS checks)
+app.options("*", cors(corsOptions));
 
 // Body parsing middleware
 app.use(express.json({ limit: "10mb" }));
@@ -148,7 +159,9 @@ function startServer(port, retries = 3) {
     if (err.code === "EADDRINUSE") {
       if (retries > 0) {
         console.warn(
-          `Port ${port} is in use, trying port ${port + 1} (retries left: ${retries - 1})...`
+          `Port ${port} is in use, trying port ${port + 1} (retries left: ${
+            retries - 1
+          })...`
         );
         setTimeout(() => startServer(port + 1, retries - 1), 300);
         return;
@@ -168,7 +181,9 @@ function startServer(port, retries = 3) {
   });
 
   server.listen(port, () => {
-    console.log(`🚀 Server running in ${process.env.NODE_ENV} mode on port ${port}`);
+    console.log(
+      `🚀 Server running in ${process.env.NODE_ENV} mode on port ${port}`
+    );
     console.log(`📊 Stock Market API: http://localhost:${port}`);
     console.log(`🏥 Health Check: http://localhost:${port}/api/health`);
 

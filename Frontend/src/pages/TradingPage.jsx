@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useRealTimeStock } from "../hooks/useRealTimeData";
 import apiService from "../utils/api";
@@ -21,6 +21,7 @@ const TradingPage = () => {
   const [success, setSuccess] = useState("");
   const [portfolio, setPortfolio] = useState(null);
   const [searchResults, setSearchResults] = useState([]);
+  const hasLoggedBalanceRef = useRef(false);
 
   // Real-time data for selected stock
   const symbols = selectedStock ? [selectedStock.symbol] : [];
@@ -179,13 +180,17 @@ const TradingPage = () => {
       portfolio?.cashBalance ||
       portfolio?.portfolio?.availableCash ||
       0;
-    console.log("💵 Checking balance:", {
-      portfolio: portfolio,
-      availableCash: portfolio?.availableCash,
-      cashBalance: portfolio?.cashBalance,
-      nestedPortfolio: portfolio?.portfolio?.availableCash,
-      finalBalance: balance,
-    });
+    // Log available balance only once per component lifecycle to avoid console spam
+    if (!hasLoggedBalanceRef.current) {
+      console.log("💵 Checking balance:", {
+        portfolio: portfolio,
+        availableCash: portfolio?.availableCash,
+        cashBalance: portfolio?.cashBalance,
+        nestedPortfolio: portfolio?.portfolio?.availableCash,
+        finalBalance: balance,
+      });
+      hasLoggedBalanceRef.current = true;
+    }
     return balance;
   };
 

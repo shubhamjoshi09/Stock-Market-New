@@ -169,8 +169,11 @@ export const validateKYC = [
 export const validateTransaction = [
   body("symbol")
     .notEmpty()
-    .isAlpha()
-    .withMessage("Stock symbol is required and should contain only letters"),
+    // Allow symbols like 'TCS', 'TCS.NS', 'NIFTY-50', 'ABC_1' etc.
+    .matches(/^[A-Za-z0-9._-]+$/)
+    .withMessage(
+      "Stock symbol is required and may contain letters, numbers, dots, hyphens or underscores"
+    ),
 
   body("type")
     .isIn(["buy", "sell"])

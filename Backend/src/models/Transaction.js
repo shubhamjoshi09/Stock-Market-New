@@ -56,7 +56,8 @@ const transactionSchema = new mongoose.Schema(
     segment: {
       type: String,
       required: true,
-      enum: ["equity", "futures", "options", "currency", "commodity"],
+      // include 'cash' for deposit/withdrawal transactions
+      enum: ["equity", "futures", "options", "currency", "commodity", "cash"],
       lowercase: true,
     },
 

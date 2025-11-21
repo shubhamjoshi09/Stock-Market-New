@@ -193,7 +193,8 @@ portfolioSchema.methods.updateHolding = function (
   symbol,
   quantity,
   price,
-  type = "buy"
+  type = "buy",
+  meta = {}
 ) {
   const existingHoldingIndex = this.holdings.findIndex(
     (h) => h.symbol === symbol
@@ -218,9 +219,11 @@ portfolioSchema.methods.updateHolding = function (
       }
     }
   } else if (type === "buy") {
-    // Add new holding
+    // Add new holding; include companyName and exchange when provided via meta
     this.holdings.push({
       symbol,
+      companyName: meta.companyName || symbol,
+      exchange: meta.exchange || "NSE",
       quantity,
       averagePrice: price,
       investedAmount: quantity * price,

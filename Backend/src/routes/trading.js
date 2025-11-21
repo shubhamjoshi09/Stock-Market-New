@@ -142,8 +142,13 @@ router.post("/place-order", async (req, res) => {
       }
     } else if (action === "SELL") {
       const sym = String(symbol).toUpperCase();
-      const holdingIndex = portfolio.holdings.findIndex((s) => s.symbol === sym);
-      if (holdingIndex === -1 || portfolio.holdings[holdingIndex].quantity < quantity) {
+      const holdingIndex = portfolio.holdings.findIndex(
+        (s) => s.symbol === sym
+      );
+      if (
+        holdingIndex === -1 ||
+        portfolio.holdings[holdingIndex].quantity < quantity
+      ) {
         return res.status(400).json({ error: "Not enough shares to sell" });
       }
 

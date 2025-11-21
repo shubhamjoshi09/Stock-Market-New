@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import Portfolio from "./Portfolio.js";
+import Transaction from "./Transaction.js";
 
 const userSchema = new mongoose.Schema(
   {
@@ -282,3 +284,51 @@ userSchema.statics.findByCredentials = async function (email, password) {
 const User = mongoose.model("User", userSchema);
 
 export default User;
+
+// Cascade delete related documents when a user is removed via Mongoose
+// - document removal: userDoc.remove()
+// - query removal: User.deleteOne({ _id }) or User.findOneAndDelete({ _id })
+// Note: deletions done directly in Mongo shell will NOT trigger these hooks.
+userSchema.pre(
+  "remove",
+  { document: true, query: false },
+  async function (next) {
+    try {
+      const userId = this._id;
+      await Promise.all([
+        Portfolio.deleteOne({ userId }),
+        Transaction.deleteMany({ userId }),
+      ]);
+      next();
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// Query middleware for deleteOne / findOneAndDelete
+async function cascadeDeleteQueryMiddleware() {
+  try {
+    const filter = this.getFilter ? this.getFilter() : {};
+    const userId = filter._id || filter.id;
+    if (!userId) return;
+    await Promise.all([
+      Portfolio.deleteOne({ userId }),
+      Transaction.deleteMany({ userId }),
+    ]);
+  } catch (err) {
+    // Log and allow the query to continue; errors will bubble if needed
+    console.warn("⚠️ Error during cascade delete middleware:", err.message);
+  }
+}
+
+userSchema.pre(
+  "deleteOne",
+  { document: false, query: true },
+  cascadeDeleteQueryMiddleware
+);
+userSchema.pre(
+  "findOneAndDelete",
+  { document: false, query: true },
+  cascadeDeleteQueryMiddleware
+);

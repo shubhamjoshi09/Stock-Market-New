@@ -1,5 +1,5 @@
 import { WebSocketServer, WebSocket } from "ws";
-import yahooFinance from "yahoo-finance2";
+import YahooFinance from "yahoo-finance2";
 
 class WebSocketService {
   constructor() {
@@ -7,6 +7,14 @@ class WebSocketService {
     this.clients = new Map(); // Store client connections with their subscriptions
     this.priceUpdateInterval = null;
     this.stockSymbols = new Set();
+    // instantiate yahoo-finance2 client to use instance methods
+    try {
+      this.yahoo = new YahooFinance();
+    } catch (e) {
+      // If instantiation fails, keep a null client and let calls fallback to demo data
+      this.yahoo = null;
+      console.warn("⚠️ Could not instantiate YahooFinance client:", e.message);
+    }
   }
 
   // Initialize WebSocket server
@@ -142,7 +150,9 @@ class WebSocketService {
   // Get current price for a specific symbol
   async handleGetPrice(clientId, symbol) {
     try {
-      const quote = await yahooFinance.quote(symbol);
+      const quote = this.yahoo
+        ? await this.yahoo.quote(symbol)
+        : await yahooFinance.quote(symbol);
 
       this.sendToClient(clientId, {
         type: "price_update",
@@ -247,7 +257,9 @@ class WebSocketService {
       try {
         let quote;
         try {
-          quote = await yahooFinance.quote(symbol);
+          quote = this.yahoo
+            ? await this.yahoo.quote(symbol)
+            : await yahooFinance.quote(symbol);
           if (
             !quote ||
             !quote.regularMarketPrice ||

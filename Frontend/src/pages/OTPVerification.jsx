@@ -57,6 +57,7 @@ const OTPVerification = () => {
       const response = await apiService.verifyOTP({
         email: email,
         otp: otp,
+        type: "email",
       });
 
       if (response.success) {
@@ -89,7 +90,10 @@ const OTPVerification = () => {
     setSuccess("");
 
     try {
-      const response = await apiService.resendOTP({ email: email });
+      const response = await apiService.resendOTP({
+        email: email,
+        type: "email",
+      });
 
       if (response.success) {
         setSuccess("New OTP sent to your email!");

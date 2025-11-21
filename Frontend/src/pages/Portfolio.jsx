@@ -152,7 +152,9 @@ const Portfolio = () => {
       {/* Portfolio Header */}
       <div className="portfolio-header">
         <div className="portfolio-title">
-          <h1>📊 Portfolio</h1>
+          <h1>
+            <span className="title-emoji">📊</span>Portfolio
+          </h1>
           <p>Track your investments and performance</p>
           <button
             onClick={fetchPortfolioData}
@@ -331,14 +333,16 @@ const Portfolio = () => {
                         <button
                           className="action-btn buy-btn"
                           onClick={() => handleBuyMore(holding.symbol)}
+                          aria-label={`Buy ${holding.symbol}`}
                         >
-                          B
+                          Buy
                         </button>
                         <button
                           className="action-btn sell-btn"
                           onClick={() => handleSell(holding.symbol)}
+                          aria-label={`Sell ${holding.symbol}`}
                         >
-                          S
+                          Sell
                         </button>
                       </div>
                     </div>
